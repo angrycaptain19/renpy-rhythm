@@ -133,11 +133,7 @@ def find_executable(exe, path=None, _cache={}):
 
     if path is None:
         path = os.environ.get('PATH', os.defpath)
-    if os.name=='posix':
-        realpath = os.path.realpath
-    else:
-        realpath = lambda a:a
-
+    realpath = os.path.realpath if os.name=='posix' else (lambda a:a)
     if exe.startswith('"'):
         exe = exe[1:-1]
 
@@ -171,8 +167,7 @@ def find_executable(exe, path=None, _cache={}):
 
 def _preserve_environment( names ):
     log.debug('_preserve_environment(%r)' % (names))
-    env = {name: os.environ.get(name) for name in names}
-    return env
+    return {name: os.environ.get(name) for name in names}
 
 def _update_environment( **env ):
     log.debug('_update_environment(...)')
@@ -220,8 +215,13 @@ def exec_command(command, execute_in='', use_shell=None, use_tee=None,
     Wild cards will not work for non-posix systems or when use_shell=0.
 
     """
-    log.debug('exec_command(%r,%s)' % (command,\
-         ','.join(['%s=%r'%kv for kv in env.items()])))
+    log.debug(
+        (
+            'exec_command(%r,%s)'
+            % (command, ','.join('%s=%r' % kv for kv in env.items()))
+        )
+    )
+
 
     if use_tee is None:
         use_tee = os.name=='posix'

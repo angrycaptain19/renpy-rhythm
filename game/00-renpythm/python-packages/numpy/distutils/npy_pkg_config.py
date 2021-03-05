@@ -108,10 +108,7 @@ class LibraryInfo(object):
     def __init__(self, name, description, version, sections, vars, requires=None):
         self.name = name
         self.description = description
-        if requires:
-            self.requires = requires
-        else:
-            self.requires = []
+        self.requires = requires or []
         self.version = version
         self._sections = sections
         self.vars = vars
@@ -225,11 +222,11 @@ def parse_meta(config):
     d = dict(config.items('meta'))
 
     for k in ['name', 'description', 'version']:
-        if not k in d:
+        if k not in d:
             raise FormatError("Option %s (section [meta]) is mandatory, "
                 "but not found" % k)
 
-    if not 'requires' in d:
+    if 'requires' not in d:
         d['requires'] = []
 
     return d
@@ -238,10 +235,7 @@ def parse_variables(config):
     if not config.has_section('variables'):
         raise FormatError("No variables section found !")
 
-    d = {}
-
-    for name, value in config.items("variables"):
-        d[name] = value
+    d = {name: value for name, value in config.items("variables")}
 
     return VariableSet(d)
 
@@ -252,11 +246,7 @@ def pkg_to_filename(pkg_name):
     return "%s.ini" % pkg_name
 
 def parse_config(filename, dirs=None):
-    if dirs:
-        filenames = [os.path.join(d, filename) for d in dirs]
-    else:
-        filenames = [filename]
-
+    filenames = [os.path.join(d, filename) for d in dirs] if dirs else [filename]
     config = RawConfigParser()
 
     n = config.read(filenames)
@@ -272,17 +262,15 @@ def parse_config(filename, dirs=None):
             vars[name] = _escape_backslash(value)
 
     # Parse "normal" sections
-    secs = [s for s in config.sections() if not s in ['meta', 'variables']]
+    secs = [s for s in config.sections() if s not in ['meta', 'variables']]
     sections = {}
 
     requires = {}
     for s in secs:
-        d = {}
         if config.has_option(s, "requires"):
             requires[s] = config.get(s, 'requires')
 
-        for name, value in config.items(s):
-            d[name] = value
+        d = {name: value for name, value in config.items(s)}
         sections[s] = d
 
     return meta, vars, sections, requires
@@ -296,7 +284,7 @@ def _read_config_imp(filenames, dirs=None):
 
             # Update var dict for variables not in 'top' config file
             for k, v in nvars.items():
-                if not k in vars:
+                if k not in vars:
                     vars[k] = v
 
             # Update sec dict
@@ -418,19 +406,14 @@ if __name__ == '__main__':
     else:
         info = read_config(pkg_name, ['numpy/core/lib/npy-pkg-config', '.'])
 
-    if options.section:
-        section = options.section
-    else:
-        section = "default"
-
+    section = options.section or "default"
     if options.define_variable:
         m = re.search(r'([\S]+)=([\S]+)', options.define_variable)
         if not m:
             raise ValueError("--define-variable option should be of " \
                              "the form --define-variable=foo=bar")
-        else:
-            name = m.group(1)
-            value = m.group(2)
+        name = m.group(1)
+        value = m.group(2)
         info.vars[name] = value
 
     if options.cflags:

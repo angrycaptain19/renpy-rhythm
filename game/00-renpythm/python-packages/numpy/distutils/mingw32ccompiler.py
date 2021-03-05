@@ -60,7 +60,7 @@ class Mingw32CCompiler(distutils.cygwinccompiler.CygwinCCompiler):
 
     compiler_type = 'mingw32'
 
-    def __init__ (self,
+    def __init__(self,
                   verbose=0,
                   dry_run=0,
                   force=0):
@@ -81,11 +81,7 @@ class Mingw32CCompiler(distutils.cygwinccompiler.CygwinCCompiler):
 
         # A real mingw32 doesn't need to specify a different entry point,
         # but cygwin 2.91.57 in no-cygwin-mode needs it.
-        if self.gcc_version <= "2.91.57":
-            entry_point = '--entry _DllMain@12'
-        else:
-            entry_point = ''
-
+        entry_point = '--entry _DllMain@12' if self.gcc_version <= "2.91.57" else ''
         if self.linker_dll == 'dllwrap':
             # Commented out '--driver-name g++' part that fixes weird
             #   g++.exe: g++: No such file or directory
@@ -211,7 +207,7 @@ class Mingw32CCompiler(distutils.cygwinccompiler.CygwinCCompiler):
         func(*args[:func.__code__.co_argcount])
         return
 
-    def object_filenames (self,
+    def object_filenames(self,
                           source_filenames,
                           strip_dir=0,
                           output_dir=''):
@@ -234,7 +230,7 @@ class Mingw32CCompiler(distutils.cygwinccompiler.CygwinCCompiler):
                       (ext, src_name))
             if strip_dir:
                 base = os.path.basename (base)
-            if ext == '.res' or ext == '.rc':
+            if ext in ['.res', '.rc']:
                 # these need to be compiled to object files
                 obj_names.append (os.path.join (output_dir,
                                                 base + ext + self.obj_extension))
@@ -308,18 +304,17 @@ def generate_def(dll, dfile):
         else:
             break
 
-    if len(syms) == 0:
+    if not syms:
         log.warn('No symbols found in %s' % dll)
 
-    d = open(dfile, 'w')
-    d.write('LIBRARY        %s\n' % os.path.basename(dll))
-    d.write(';CODE          PRELOAD MOVEABLE DISCARDABLE\n')
-    d.write(';DATA          PRELOAD SINGLE\n')
-    d.write('\nEXPORTS\n')
-    for s in syms:
-        #d.write('@%d    %s\n' % (s[0], s[1]))
-        d.write('%s\n' % s[1])
-    d.close()
+    with open(dfile, 'w') as d:
+        d.write('LIBRARY        %s\n' % os.path.basename(dll))
+        d.write(';CODE          PRELOAD MOVEABLE DISCARDABLE\n')
+        d.write(';DATA          PRELOAD SINGLE\n')
+        d.write('\nEXPORTS\n')
+        for s in syms:
+            #d.write('@%d    %s\n' % (s[0], s[1]))
+            d.write('%s\n' % s[1])
 
 def find_dll(dll_name):
 
@@ -619,12 +614,11 @@ def check_embedded_msvcr_match_linked(msver):
     # check msvcr major version are the same for linking and
     # embedding
     maj = msvc_runtime_major()
-    if maj:
-        if not maj == int(msver):
-            raise ValueError(
-                  "Discrepancy between linked msvcr " \
-                  "(%d) and the one about to be embedded " \
-                  "(%d)" % (int(msver), maj))
+    if maj and maj != int(msver):
+        raise ValueError(
+              "Discrepancy between linked msvcr " \
+              "(%d) and the one about to be embedded " \
+              "(%d)" % (int(msver), maj))
 
 def configtest_name(config):
     base = os.path.basename(config._gen_temp_sourcefile("yo", [], "c"))
@@ -643,14 +637,12 @@ def rc_name(config):
 
 def generate_manifest(config):
     msver = get_build_msvc_version()
-    if msver is not None:
-        if msver >= 8:
-            check_embedded_msvcr_match_linked(msver)
-            ma = int(msver)
-            mi = int((msver - ma) * 10)
-            # Write the manifest file
-            manxml = msvc_manifest_xml(ma, mi)
-            man = open(manifest_name(config), "w")
+    if msver is not None and msver >= 8:
+        check_embedded_msvcr_match_linked(msver)
+        ma = int(msver)
+        mi = int((msver - ma) * 10)
+        # Write the manifest file
+        manxml = msvc_manifest_xml(ma, mi)
+        with open(manifest_name(config), "w") as man:
             config.temp_files.append(manifest_name(config))
             man.write(manxml)
-            man.close()

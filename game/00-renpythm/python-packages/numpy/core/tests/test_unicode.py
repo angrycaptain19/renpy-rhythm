@@ -14,10 +14,7 @@ if sys.version_info[:2] >= (3, 3):
     def buffer_length(arr):
         if isinstance(arr, unicode):
             arr = str(arr)
-            if not arr:
-                charmax = 0
-            else:
-                charmax = max([ord(c) for c in arr])
+            charmax = 0 if not arr else max(ord(c) for c in arr)
             if charmax < 256:
                 size = 1
             elif charmax < 65536:

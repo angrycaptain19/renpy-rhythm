@@ -1805,13 +1805,13 @@ class TestMethods(object):
 
     def test_void_sort(self):
         # gh-8210 - previously segfaulted
-        for i in range(4):
+        for _ in range(4):
             rand = np.random.randint(256, size=4000, dtype=np.uint8)
             arr = rand.view('V4')
             arr[::-1].sort()
 
         dt = np.dtype([('val', 'i4', (1,))])
-        for i in range(4):
+        for _ in range(4):
             rand = np.random.randint(256, size=4000, dtype=np.uint8)
             arr = rand.view(dt)
             arr[::-1].sort()
@@ -1896,10 +1896,7 @@ class TestMethods(object):
         assert_raises_regex(ValueError, 'duplicate',
             lambda: r.sort(order=['id', 'id']))
 
-        if sys.byteorder == 'little':
-            strtype = '>i2'
-        else:
-            strtype = '<i2'
+        strtype = '>i2' if sys.byteorder == 'little' else '<i2'
         mydtype = [('name', strchar + '5'), ('col2', strtype)]
         r = np.array([('a', 1), ('b', 255), ('c', 3), ('d', 258)],
                      dtype=mydtype)
@@ -2498,10 +2495,10 @@ class TestMethods(object):
 
             td = [(dt, s) for dt in [np.int32, np.float32, np.complex64]
                   for s in (9, 16)]
-            for dt, s in td:
-                aae = assert_array_equal
-                at = assert_
+            aae = assert_array_equal
+            at = assert_
 
+            for dt, s in td:
                 d = np.arange(s, dtype=dt)
                 np.random.shuffle(d)
                 d1 = np.tile(np.arange(s, dtype=dt), (4, 1))

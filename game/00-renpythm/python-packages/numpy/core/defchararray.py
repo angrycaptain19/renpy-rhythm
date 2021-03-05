@@ -1968,11 +1968,7 @@ class chararray(ndarray):
                 offset=0, strides=None, order='C'):
         global _globalvar
 
-        if unicode:
-            dtype = unicode_
-        else:
-            dtype = string_
-
+        dtype = unicode_ if unicode else string_
         # force itemsize to be a Python long, since using NumPy integer
         # types results in itemsize.itemsize being used as the size of
         # strings in the new array.
@@ -2009,11 +2005,7 @@ class chararray(ndarray):
 
         if isinstance(val, character):
             temp = val.rstrip()
-            if _len(temp) == 0:
-                val = ''
-            else:
-                val = temp
-
+            val = '' if _len(temp) == 0 else temp
         return val
 
     # IMPLEMENTATION NOTE: Most of the methods of this class are

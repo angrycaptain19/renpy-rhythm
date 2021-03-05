@@ -65,10 +65,7 @@ def atleast_1d(*arys):
     res = []
     for ary in arys:
         ary = asanyarray(ary)
-        if ary.ndim == 0:
-            result = ary.reshape(1)
-        else:
-            result = ary
+        result = ary.reshape(1) if ary.ndim == 0 else ary
         res.append(result)
     if len(res) == 1:
         return res[0]
@@ -644,14 +641,14 @@ def _block(arrays, max_depth, result_ndim, depth=0):
     `arrays` and the depth of the lists in `arrays` (see block docstring
     for details).
     """
-    if depth < max_depth:
-        arrs = [_block(arr, max_depth, result_ndim, depth+1)
-                for arr in arrays]
-        return _nx.concatenate(arrs, axis=-(max_depth-depth))
-    else:
+    if depth >= max_depth:
         # We've 'bottomed out' - arrays is either a scalar or an array
         # type(arrays) is not list
         return _atleast_nd(arrays, result_ndim)
+
+    arrs = [_block(arr, max_depth, result_ndim, depth+1)
+            for arr in arrays]
+    return _nx.concatenate(arrs, axis=-(max_depth-depth))
 
 
 def _block_dispatcher(arrays):
@@ -660,8 +657,7 @@ def _block_dispatcher(arrays):
     # tuple. Also, we know that list.__array_function__ will never exist.
     if type(arrays) is list:
         for subarrays in arrays:
-            for subarray in _block_dispatcher(subarrays):
-                yield subarray
+            yield from _block_dispatcher(subarrays)
     else:
         yield arrays
 

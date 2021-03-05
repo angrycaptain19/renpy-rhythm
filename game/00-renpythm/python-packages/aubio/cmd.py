@@ -277,7 +277,7 @@ def samples2samples(n_frames, _samplerate):
 def timefunc(mode):
     if mode is None or mode == 'seconds' or mode == 's':
         return samples2seconds
-    elif mode == 'ms' or mode == 'milliseconds':
+    elif mode in ['ms', 'milliseconds']:
         return samples2milliseconds
     elif mode == 'samples':
         return samples2samples
@@ -436,7 +436,7 @@ class process_mfcc(default_process):
         return self.mfcc(fftgrain)
     def repr_res(self, res, frames_read, samplerate):
         fmt_out = self.time2string(frames_read, samplerate)
-        fmt_out += ' '.join(["% 9.7f" % f for f in res.tolist()])
+        fmt_out += ' '.join("% 9.7f" % f for f in res.tolist())
         sys.stdout.write(fmt_out + '\n')
 
 class process_melbands(default_process):
@@ -459,7 +459,7 @@ class process_melbands(default_process):
         return self.filterbank(fftgrain)
     def repr_res(self, res, frames_read, samplerate):
         fmt_out = self.time2string(frames_read, samplerate)
-        fmt_out += ' '.join(["% 9.7f" % f for f in res.tolist()])
+        fmt_out += ' '.join("% 9.7f" % f for f in res.tolist())
         sys.stdout.write(fmt_out + '\n')
 
 class process_quiet(default_process):
@@ -489,7 +489,7 @@ class process_quiet(default_process):
         fmt_out = None
         if res == -1:
             fmt_out = "NOISY: "
-        if res == 2:
+        elif res == 2:
             fmt_out = "QUIET: "
         if fmt_out is not None:
             fmt_out += self.time2string(frames_read, samplerate)

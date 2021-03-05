@@ -53,16 +53,16 @@ class build_clib(old_build_clib):
         self.set_undefined_options('build', ('parallel', 'parallel'))
 
     def have_f_sources(self):
-        for (lib_name, build_info) in self.libraries:
-            if has_f_sources(build_info.get('sources', [])):
-                return True
-        return False
+        return any(
+            has_f_sources(build_info.get('sources', []))
+            for (lib_name, build_info) in self.libraries
+        )
 
     def have_cxx_sources(self):
-        for (lib_name, build_info) in self.libraries:
-            if has_cxx_sources(build_info.get('sources', [])):
-                return True
-        return False
+        return any(
+            has_cxx_sources(build_info.get('sources', []))
+            for (lib_name, build_info) in self.libraries
+        )
 
     def run(self):
         if not self.libraries:
@@ -148,8 +148,7 @@ class build_clib(old_build_clib):
 
         c_sources, cxx_sources, f_sources, fmodule_sources \
             = filter_sources(sources)
-        requiref90 = not not fmodule_sources or \
-            build_info.get('language', 'c') == 'f90'
+        requiref90 = bool(fmodule_sources) or build_info.get('language', 'c') == 'f90'
 
         # save source type information so that build_ext can use it.
         source_languages = []
@@ -166,7 +165,7 @@ class build_clib(old_build_clib):
         lib_file = compiler.library_filename(lib_name,
                                              output_dir=self.build_clib)
         depends = sources + build_info.get('depends', [])
-        if not (self.force or newer_group(depends, lib_file, 'newer')):
+        if not self.force and not newer_group(depends, lib_file, 'newer'):
             log.debug("skipping '%s' library (up-to-date)", lib_name)
             return
         else:
@@ -241,10 +240,10 @@ class build_clib(old_build_clib):
                                                extra_postargs=extra_postargs)
             objects.extend(cxx_objects)
 
+        f_objects = []
+
         if f_sources or fmodule_sources:
             extra_postargs = []
-            f_objects = []
-
             if requiref90:
                 if fcompiler.module_dir_switch is None:
                     existing_modules = glob('*.mod')
@@ -276,17 +275,14 @@ class build_clib(old_build_clib):
                         log.warn('failed to move %r to %r'
                                  % (f, module_build_dir))
 
-            if f_sources:
-                log.info("compiling Fortran sources")
-                f_objects += fcompiler.compile(f_sources,
-                                               output_dir=self.build_temp,
-                                               macros=macros,
-                                               include_dirs=include_dirs,
-                                               debug=self.debug,
-                                               extra_postargs=extra_postargs)
-        else:
-            f_objects = []
-
+        if f_sources:
+            log.info("compiling Fortran sources")
+            f_objects += fcompiler.compile(f_sources,
+                                           output_dir=self.build_temp,
+                                           macros=macros,
+                                           include_dirs=include_dirs,
+                                           debug=self.debug,
+                                           extra_postargs=extra_postargs)
         if f_objects and not fcompiler.can_ccompiler_link(compiler):
             # Default linker cannot link Fortran object files, and results
             # need to be wrapped later. Instead of creating a real static

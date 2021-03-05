@@ -416,14 +416,14 @@ class TestClassicIntDivision(_DeprecationTestCase):
     List of data types: https://docs.scipy.org/doc/numpy/user/basics.types.html
     """
     def test_int_dtypes(self):
-        #scramble types and do some mix and match testing
-        deprecated_types = [
-           'bool_', 'int_', 'intc', 'uint8', 'int8', 'uint64', 'int32', 'uint16',
-           'intp', 'int64', 'uint32', 'int16'
-            ]
         if sys.version_info[0] < 3 and sys.py3kwarning:
             import operator as op
             dt2 = 'bool_'
+            #scramble types and do some mix and match testing
+            deprecated_types = [
+               'bool_', 'int_', 'intc', 'uint8', 'int8', 'uint64', 'int32', 'uint16',
+               'intp', 'int64', 'uint32', 'int16'
+                ]
             for dt1 in deprecated_types:
                 a = np.array([1,2,3], dtype=dt1)
                 b = np.array([1,2,3], dtype=dt2)
@@ -502,7 +502,7 @@ class TestBincount(_DeprecationTestCase):
 class TestGeneratorSum(_DeprecationTestCase):
     # 2018-02-25, 1.15.0
     def test_generator_sum(self):
-        self.assert_deprecated(np.sum, args=((i for i in range(5)),))
+        self.assert_deprecated(np.sum, args=(iter(range(5)), ))
 
 
 class TestSctypeNA(_VisibleDeprecationTestCase):

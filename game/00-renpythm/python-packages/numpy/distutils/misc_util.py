@@ -218,15 +218,14 @@ def get_mathlibs(path=None):
             raise DistutilsError('_numpyconfig.h not found in numpy include '
                 'dirs %r' % (dirs,))
 
-    fid = open(config_file)
-    mathlibs = []
-    s = '#define MATHLIB'
-    for line in fid:
-        if line.startswith(s):
-            value = line[len(s):].strip()
-            if value:
-                mathlibs.extend(value.split(','))
-    fid.close()
+    with open(config_file) as fid:
+        mathlibs = []
+        s = '#define MATHLIB'
+        for line in fid:
+            if line.startswith(s):
+                value = line[len(s):].strip()
+                if value:
+                    mathlibs.extend(value.split(','))
     return mathlibs
 
 def minrelpath(path):
@@ -286,9 +285,11 @@ def _fix_paths(paths, local_path, include_non_existing):
                 if os.path.exists(n2):
                     new_paths.append(n2)
                 else:
-                    if os.path.exists(n):
-                        new_paths.append(n)
-                    elif include_non_existing:
+                    if (
+                        os.path.exists(n)
+                        or not os.path.exists(n)
+                        and include_non_existing
+                    ):
                         new_paths.append(n)
                     if not os.path.exists(n):
                         print('non-existing path in %r: %r' %
@@ -401,11 +402,7 @@ def mingw32():
 def msvc_runtime_version():
     "Return version of MSVC runtime library, as defined by __MSC_VER__ macro"
     msc_pos = sys.version.find('MSC v.')
-    if msc_pos != -1:
-        msc_ver = int(sys.version[msc_pos+6:msc_pos+10])
-    else:
-        msc_ver = None
-    return msc_ver
+    return int(sys.version[msc_pos+6:msc_pos+10]) if msc_pos != -1 else None
 
 def msvc_runtime_library():
     "Return name of MSVC runtime library if Python was built with MSVC >= 7"
@@ -420,14 +417,13 @@ def msvc_runtime_library():
 
 def msvc_runtime_major():
     "Return major version of MSVC runtime coded like get_build_msvc_version"
-    major = {1300:  70,  # MSVC 7.0
+    return {1300:  70,  # MSVC 7.0
              1310:  71,  # MSVC 7.1
              1400:  80,  # MSVC 8
              1500:  90,  # MSVC 9  (aka 2008)
              1600: 100,  # MSVC 10 (aka 2010)
              1900: 140,  # MSVC 14 (aka 2015)
     }.get(msvc_runtime_version(), None)
-    return major
 
 #########################
 
@@ -443,14 +439,13 @@ def _get_f90_modules(source):
     if not f90_ext_match(source):
         return []
     modules = []
-    f = open(source, 'r')
-    for line in f:
-        m = f90_module_name_match(line)
-        if m:
-            name = m.group('name')
-            modules.append(name)
-            # break  # XXX can we assume that there is one module per file?
-    f.close()
+    with open(source, 'r') as f:
+        for line in f:
+            m = f90_module_name_match(line)
+            if m:
+                name = m.group('name')
+                modules.append(name)
+                # break  # XXX can we assume that there is one module per file?
     return modules
 
 def is_string(s):
@@ -458,10 +453,7 @@ def is_string(s):
 
 def all_strings(lst):
     """Return True if all items in lst are string objects. """
-    for item in lst:
-        if not is_string(item):
-            return False
-    return True
+    return all(is_string(item) for item in lst)
 
 def is_sequence(seq):
     if is_string(seq):
@@ -496,17 +488,11 @@ def get_language(sources):
 
 def has_f_sources(sources):
     """Return True if sources contains Fortran files """
-    for source in sources:
-        if fortran_ext_match(source):
-            return True
-    return False
+    return any(fortran_ext_match(source) for source in sources)
 
 def has_cxx_sources(sources):
     """Return True if sources contains C++ files """
-    for source in sources:
-        if cxx_ext_match(source):
-            return True
-    return False
+    return any(cxx_ext_match(source) for source in sources)
 
 def filter_sources(sources):
     """Return four lists of filenames containing
@@ -544,7 +530,7 @@ def _get_directories(list_of_sources):
     direcs = []
     for f in list_of_sources:
         d = os.path.split(f)
-        if d[0] != '' and not d[0] in direcs:
+        if d[0] != '' and d[0] not in direcs:
             direcs.append(d[0])
     return direcs
 
@@ -713,7 +699,7 @@ def get_data_files(data):
     return filenames
 
 def dot_join(*args):
-    return '.'.join([a for a in args if a])
+    return '.'.join(a for a in args if a)
 
 def get_frame(level=0):
     """Return frame object from call stack with given level.
@@ -830,9 +816,11 @@ class Configuration(object):
                 break
             except NameError:
                 pass
-        if isinstance(caller_instance, self.__class__):
-            if caller_instance.options['delegate_options_to_subpackages']:
-                self.set_options(**caller_instance.options)
+        if (
+            isinstance(caller_instance, self.__class__)
+            and caller_instance.options['delegate_options_to_subpackages']
+        ):
+            self.set_options(**caller_instance.options)
 
         self.setup_name = setup_name
 
@@ -984,10 +972,11 @@ class Configuration(object):
             subpackage_path = njoin([subpackage_path] + l[:-1])
             subpackage_path = self.paths([subpackage_path])[0]
         setup_py = njoin(subpackage_path, self.setup_name)
-        if not self.options['ignore_setup_xxx_py']:
-            if not os.path.isfile(setup_py):
-                setup_py = njoin(subpackage_path,
-                                 'setup_%s.py' % (subpackage_name))
+        if not self.options['ignore_setup_xxx_py'] and not os.path.isfile(
+            setup_py
+        ):
+            setup_py = njoin(subpackage_path,
+                             'setup_%s.py' % (subpackage_name))
         if not os.path.isfile(setup_py):
             if not self.options['assume_default_configuration']:
                 self.warn('Assuming default configuration '\
@@ -1027,10 +1016,7 @@ class Configuration(object):
         standalone : bool
         """
 
-        if standalone:
-            parent_name = None
-        else:
-            parent_name = self.name
+        parent_name = None if standalone else self.name
         config_list = self.get_subpackage(subpackage_name, subpackage_path,
                                           parent_name = parent_name,
                                           caller_level = 2)
@@ -1109,11 +1095,10 @@ class Configuration(object):
         """
         if is_sequence(data_path):
             d, data_path = data_path
-        else:
-            d = None
-        if is_sequence(data_path):
             [self.add_data_dir((d, p)) for p in data_path]
             return
+        else:
+            d = None
         if not is_string(data_path):
             raise TypeError("not a string: %r" % (data_path,))
         if d is None:
@@ -1417,9 +1402,9 @@ class Configuration(object):
 
     def _fix_paths_dict(self, kw):
         for k in kw.keys():
-            v = kw[k]
             if k in ['sources', 'depends', 'include_dirs', 'library_dirs',
                      'module_dirs', 'extra_objects']:
+                v = kw[k]
                 new_v = self.paths(v)
                 kw[k] = new_v
 
@@ -1570,7 +1555,7 @@ class Configuration(object):
 
         # Sometimes, depends is not set up to an empty list by default, and if
         # depends is not given to add_library, distutils barfs (#1134)
-        if not 'depends' in build_info:
+        if 'depends' not in build_info:
             build_info['depends'] = []
 
         self._fix_paths_dict(build_info)
@@ -1794,8 +1779,7 @@ class Configuration(object):
         end
         '''
         config_cmd = self.get_config_cmd()
-        flag = config_cmd.try_compile(simple_fortran_subroutine, lang='f77')
-        return flag
+        return config_cmd.try_compile(simple_fortran_subroutine, lang='f77')
 
     def have_f90c(self):
         """Check for availability of Fortran 90 compiler.
@@ -1813,8 +1797,7 @@ class Configuration(object):
         end
         '''
         config_cmd = self.get_config_cmd()
-        flag = config_cmd.try_compile(simple_fortran_subroutine, lang='f90')
-        return flag
+        return config_cmd.try_compile(simple_fortran_subroutine, lang='f90')
 
     def append_to(self, extlib):
         """Append libraries, include_dirs to extension or library item.
@@ -1848,17 +1831,14 @@ class Configuration(object):
         else:
             entries = njoin(path, '.svn', 'entries')
         if os.path.isfile(entries):
-            f = open(entries)
-            fstr = f.read()
-            f.close()
+            with open(entries) as f:
+                fstr = f.read()
             if fstr[:5] == '<?xml':  # pre 1.4
                 m = re.search(r'revision="(?P<revision>\d+)"', fstr)
-                if m:
-                    return int(m.group('revision'))
             else:  # non-xml entries file --- check to be sure that
                 m = re.search(r'dir[\n\r]+(?P<revision>\d+)', fstr)
-                if m:
-                    return int(m.group('revision'))
+            if m:
+                return int(m.group('revision'))
         return None
 
     def _get_hg_revision(self, path):
@@ -1879,10 +1859,8 @@ class Configuration(object):
 
         if os.path.isfile(branch_fn):
             branch0 = None
-            f = open(branch_fn)
-            revision0 = f.read().strip()
-            f.close()
-
+            with open(branch_fn) as f:
+                revision0 = f.read().strip()
             branch_map = {}
             for line in file(branch_cache_fn, 'r'):
                 branch1, revision1  = line.split()[:2]
@@ -2100,9 +2078,8 @@ def get_npy_pkg_dir():
     """Return the path where to find the npy-pkg-config directory."""
     # XXX: import here for bootstrapping reasons
     import numpy
-    d = os.path.join(os.path.dirname(numpy.__file__),
+    return os.path.join(os.path.dirname(numpy.__file__),
             'core', 'lib', 'npy-pkg-config')
-    return d
 
 def get_pkg_info(pkgname, dirs=None):
     """
@@ -2273,13 +2250,13 @@ def generate_config_py(target):
     from numpy.distutils.system_info import system_info
     from distutils.dir_util import mkpath
     mkpath(os.path.dirname(target))
-    f = open(target, 'w')
-    f.write('# This file is generated by numpy\'s %s\n' % (os.path.basename(sys.argv[0])))
-    f.write('# It contains system_info results at the time of building this package.\n')
-    f.write('__all__ = ["get_info","show"]\n\n')
+    with open(target, 'w') as f:
+        f.write('# This file is generated by numpy\'s %s\n' % (os.path.basename(sys.argv[0])))
+        f.write('# It contains system_info results at the time of building this package.\n')
+        f.write('__all__ = ["get_info","show"]\n\n')
 
-    # For gfortran+msvc combination, extra shared libraries may exist
-    f.write("""
+        # For gfortran+msvc combination, extra shared libraries may exist
+        f.write("""
 
 import os
 import sys
@@ -2292,9 +2269,9 @@ if sys.platform == 'win32' and os.path.isdir(extra_dll_dir):
 
 """)
 
-    for k, i in system_info.saved_results.items():
-        f.write('%s=%r\n' % (k, i))
-    f.write(r'''
+        for k, i in system_info.saved_results.items():
+            f.write('%s=%r\n' % (k, i))
+        f.write(r'''
 def get_info(name):
     g = globals()
     return g.get(name, g.get(name + "_info", {}))
@@ -2312,13 +2289,12 @@ def show():
             print("    %s = %s" % (k,v))
     ''')
 
-    f.close()
     return target
 
 def msvc_version(compiler):
     """Return version major and minor of compiler instance if it is
     MSVC, raise an exception otherwise."""
-    if not compiler.compiler_type == "msvc":
+    if compiler.compiler_type != "msvc":
         raise ValueError("Compiler instance is not msvc (%s)"\
                          % compiler.compiler_type)
     return compiler._MSVCCompiler__version

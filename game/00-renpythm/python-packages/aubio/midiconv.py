@@ -135,7 +135,7 @@ def midi2note(midi):
     """
     if not isinstance(midi, int_instances):
         raise TypeError("an integer is required, got %s" % midi)
-    if midi not in range(0, 128):
+    if midi not in range(128):
         msg = "an integer between 0 and 127 is excepted, got {:d}"
         raise ValueError(msg.format(midi))
     _valid_notenames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#',

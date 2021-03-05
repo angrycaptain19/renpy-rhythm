@@ -62,7 +62,7 @@ def _indices(ndims):
     # no itertools.product available in Py2.4
 
     res = [[]]
-    for i in range(ndims):
+    for _ in range(ndims):
         newres = []
         for elem in ind:
             for others in res:
@@ -92,8 +92,8 @@ def test_overlapping_assignments():
     inds = _indices(ndims)
 
     for ind in inds:
-        srcidx = tuple([a[0] for a in ind])
-        dstidx = tuple([a[1] for a in ind])
+        srcidx = tuple(a[0] for a in ind)
+        dstidx = tuple(a[1] for a in ind)
 
         _check_assignment(srcidx, dstidx)
 
@@ -150,7 +150,7 @@ def test_diophantine_fuzz():
                 for r in ranges:
                     size *= len(r)
                 if size < 100000:
-                    assert_(not any(sum(w) == b for w in itertools.product(*ranges)))
+                    assert_(all(sum(w) != b for w in itertools.product(*ranges)))
                     infeasible_count += 1
             else:
                 # Check the simplified decision problem agrees
@@ -669,10 +669,7 @@ class TestUFunc(object):
                         else:
                             if outsize is None:
                                 k = b.shape[axis]//2
-                                if ndim == 1:
-                                    sl[axis] = slice(k, k + 1)
-                                else:
-                                    sl[axis] = k
+                                sl[axis] = slice(k, k + 1) if ndim == 1 else k
                             else:
                                 assert b.shape[axis] >= outsize
                                 sl[axis] = slice(0, outsize)
@@ -769,21 +766,14 @@ class TestUFunc(object):
                     continue
 
                 # Ensure the shapes are so that euclidean_pdist is happy
-                if b.shape[-1] > b.shape[-2]:
-                    b = b[...,0,:]
-                else:
-                    b = b[...,:,0]
-
+                b = b[...,0,:] if b.shape[-1] > b.shape[-2] else b[...,:,0]
                 n = a.shape[-2]
                 p = n * (n - 1) // 2
-                if p <= b.shape[-1] and p > 0:
-                    b = b[...,:p]
-                else:
+                if p > b.shape[-1] or p <= 0:
                     n = max(2, int(np.sqrt(b.shape[-1]))//2)
                     p = n * (n - 1) // 2
                     a = a[...,:n,:]
-                    b = b[...,:p]
-
+                b = b[...,:p]
                 # Call
                 if np.shares_memory(a, b):
                     overlapping += 1
@@ -798,12 +788,11 @@ class TestUFunc(object):
                 ufunc.at(a0, ind.copy())
                 c1 = a0.copy()
                 ufunc.at(a, ind)
-                c2 = a.copy()
             else:
                 ufunc.at(a0, ind.copy(), b.copy())
                 c1 = a0.copy()
                 ufunc.at(a, ind, b)
-                c2 = a.copy()
+            c2 = a.copy()
             assert_array_equal(c1, c2)
 
         # Overlap with index

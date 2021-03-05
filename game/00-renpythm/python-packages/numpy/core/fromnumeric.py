@@ -294,8 +294,7 @@ def reshape(a, newshape, order='C'):
 
 def _choose_dispatcher(a, choices, out=None, mode=None):
     yield a
-    for c in choices:
-        yield c
+    yield from choices
     yield out
 
 
@@ -1314,7 +1313,7 @@ def resize(a, new_shape):
     extra = total_size % Na
 
     if extra != 0:
-        n_copies = n_copies + 1
+        n_copies += 1
         extra = Na - extra
 
     a = concatenate((a,) * n_copies)

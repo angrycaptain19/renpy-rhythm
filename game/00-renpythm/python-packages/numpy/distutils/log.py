@@ -18,7 +18,7 @@ def _fix_args(args,flag=1):
     if is_string(args):
         return args.replace('%', '%%')
     if flag and is_sequence(args):
-        return tuple([_fix_args(a, flag=0) for a in args])
+        return tuple(_fix_args(a, flag=0) for a in args)
     return args
 
 
@@ -27,11 +27,6 @@ class Log(old_Log):
         if level >= self.threshold:
             if args:
                 msg = msg % _fix_args(args)
-            if 0:
-                if msg.startswith('copying ') and msg.find(' -> ') != -1:
-                    return
-                if msg.startswith('byte-compiling '):
-                    return
             print(_global_color_map[level](msg))
             sys.stdout.flush()
 

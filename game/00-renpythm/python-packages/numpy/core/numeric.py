@@ -1334,7 +1334,7 @@ def tensordot(a, b, axes=2):
         iter(axes)
     except Exception:
         axes_a = list(range(-axes, 0))
-        axes_b = list(range(0, axes))
+        axes_b = list(range(axes))
     else:
         axes_a, axes_b = axes
     try:
@@ -1462,30 +1462,29 @@ def roll(a, shift, axis=None):
     if axis is None:
         return roll(a.ravel(), shift, 0).reshape(a.shape)
 
-    else:
-        axis = normalize_axis_tuple(axis, a.ndim, allow_duplicate=True)
-        broadcasted = broadcast(shift, axis)
-        if broadcasted.ndim > 1:
-            raise ValueError(
-                "'shift' and 'axis' should be scalars or 1D sequences")
-        shifts = {ax: 0 for ax in range(a.ndim)}
-        for sh, ax in broadcasted:
-            shifts[ax] += sh
+    axis = normalize_axis_tuple(axis, a.ndim, allow_duplicate=True)
+    broadcasted = broadcast(shift, axis)
+    if broadcasted.ndim > 1:
+        raise ValueError(
+            "'shift' and 'axis' should be scalars or 1D sequences")
+    shifts = {ax: 0 for ax in range(a.ndim)}
+    for sh, ax in broadcasted:
+        shifts[ax] += sh
 
-        rolls = [((slice(None), slice(None)),)] * a.ndim
-        for ax, offset in shifts.items():
-            offset %= a.shape[ax] or 1  # If `a` is empty, nothing matters.
-            if offset:
-                # (original, result), (original, result)
-                rolls[ax] = ((slice(None, -offset), slice(offset, None)),
-                             (slice(-offset, None), slice(None, offset)))
+    rolls = [((slice(None), slice(None)),)] * a.ndim
+    for ax, offset in shifts.items():
+        offset %= a.shape[ax] or 1  # If `a` is empty, nothing matters.
+        if offset:
+            # (original, result), (original, result)
+            rolls[ax] = ((slice(None, -offset), slice(offset, None)),
+                         (slice(-offset, None), slice(None, offset)))
 
-        result = empty_like(a)
-        for indices in itertools.product(*rolls):
-            arr_index, res_index = zip(*indices)
-            result[res_index] = a[arr_index]
+    result = empty_like(a)
+    for indices in itertools.product(*rolls):
+        arr_index, res_index = zip(*indices)
+        result[res_index] = a[arr_index]
 
-        return result
+    return result
 
 
 def _rollaxis_dispatcher(a, axis, start=None):
@@ -1540,15 +1539,15 @@ def rollaxis(a, axis, start=0):
     axis = normalize_axis_index(axis, n)
     if start < 0:
         start += n
-    msg = "'%s' arg requires %d <= %s < %d, but %d was passed in"
     if not (0 <= start < n + 1):
+        msg = "'%s' arg requires %d <= %s < %d, but %d was passed in"
         raise AxisError(msg % ('start', -n, 'start', n + 1, start))
     if axis < start:
         # it's been removed
         start -= 1
     if axis == start:
         return a[...]
-    axes = list(range(0, n))
+    axes = list(range(n))
     axes.remove(axis)
     axes.insert(start, axis)
     return a.transpose(axes)
@@ -1604,7 +1603,7 @@ def normalize_axis_tuple(axis, ndim, argname=None, allow_duplicate=False):
         except TypeError:
             pass
     # Going via an iterator directly is slower than via list comprehension.
-    axis = tuple([normalize_axis_index(ax, ndim, argname) for ax in axis])
+    axis = tuple(normalize_axis_index(ax, ndim, argname) for ax in axis)
     if not allow_duplicate and len(set(axis)) != len(axis):
         if argname:
             raise ValueError('repeated axis in `{}` argument'.format(argname))
@@ -1685,8 +1684,7 @@ def moveaxis(a, source, destination):
     for dest, src in sorted(zip(destination, source)):
         order.insert(dest, src)
 
-    result = transpose(order)
-    return result
+    return transpose(order)
 
 
 # fix hack in scipy which imports this function
@@ -1823,9 +1821,9 @@ def cross(a, b, axisa=-1, axisb=-1, axisc=-1, axis=None):
     # Move working axis to the end of the shape
     a = moveaxis(a, axisa, -1)
     b = moveaxis(b, axisb, -1)
-    msg = ("incompatible dimensions for cross product\n"
-           "(dimension must be 2 or 3)")
     if a.shape[-1] not in (2, 3) or b.shape[-1] not in (2, 3):
+        msg = ("incompatible dimensions for cross product\n"
+               "(dimension must be 2 or 3)")
         raise ValueError(msg)
 
     # Create the output array
@@ -2310,9 +2308,8 @@ def _maketup(descr, val):
     fields = dt.fields
     if fields is None:
         return val
-    else:
-        res = [_maketup(fields[name][0], val) for name in dt.names]
-        return tuple(res)
+    res = [_maketup(fields[name][0], val) for name in dt.names]
+    return tuple(res)
 
 
 @set_module('numpy')
@@ -2929,9 +2926,15 @@ def seterrcall(func):
     {'over': 'log', 'divide': 'log', 'invalid': 'log', 'under': 'log'}
 
     """
-    if func is not None and not isinstance(func, collections_abc.Callable):
-        if not hasattr(func, 'write') or not isinstance(func.write, collections_abc.Callable):
-            raise ValueError("Only callable can be used as callback")
+    if (
+        func is not None
+        and not isinstance(func, collections_abc.Callable)
+        and (
+            not hasattr(func, 'write')
+            or not isinstance(func.write, collections_abc.Callable)
+        )
+    ):
+        raise ValueError("Only callable can be used as callback")
     pyvals = umath.geterrobj()
     old = geterrcall()
     pyvals[2] = func
