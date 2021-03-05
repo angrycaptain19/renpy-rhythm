@@ -78,15 +78,18 @@ dlist, flist = parse_nm(nm_output)"""
     data = DATA_RE.findall(nm_output)
     func = FUNC_RE.findall(nm_output)
 
-    flist = []
-    for sym in data:
-        if sym in func and (sym[:2] == 'Py' or sym[:3] == '_Py' or sym[:4] == 'init'):
-            flist.append(sym)
+    flist = [
+        sym
+        for sym in data
+        if sym in func
+        and (sym[:2] == 'Py' or sym[:3] == '_Py' or sym[:4] == 'init')
+    ]
 
-    dlist = []
-    for sym in data:
-        if sym not in flist and (sym[:2] == 'Py' or sym[:3] == '_Py'):
-            dlist.append(sym)
+    dlist = [
+        sym
+        for sym in data
+        if sym not in flist and (sym[:2] == 'Py' or sym[:3] == '_Py')
+    ]
 
     dlist.sort()
     flist.sort()
@@ -105,10 +108,7 @@ output_def(dlist, flist, header, file = sys.stdout)"""
 
 if __name__ == '__main__':
     libfile, deffile = parse_cmd()
-    if deffile is None:
-        deffile = sys.stdout
-    else:
-        deffile = open(deffile, 'w')
+    deffile = sys.stdout if deffile is None else open(deffile, 'w')
     nm_cmd = [str(DEFAULT_NM), str(libfile)]
     nm_output = getnm(nm_cmd)
     dlist, flist = parse_nm(nm_output)

@@ -199,8 +199,8 @@ class TestNDArrayArrayFunction(object):
 
     def test_no_wrapper(self):
         array = np.array(1)
-        func = dispatched_one_arg.__wrapped__
         with assert_raises_regex(AttributeError, '__wrapped__'):
+            func = dispatched_one_arg.__wrapped__
             array.__array_function__(func=func,
                                      types=(np.ndarray,),
                                      args=(array,), kwargs={})

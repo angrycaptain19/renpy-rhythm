@@ -86,12 +86,11 @@ class TestFromrecords(object):
     def test_recarray_fromfile(self):
         data_dir = path.join(path.dirname(__file__), 'data')
         filename = path.join(data_dir, 'recarray_from_file.fits')
-        fd = open(filename, 'rb')
-        fd.seek(2880 * 2)
-        r1 = np.rec.fromfile(fd, formats='f8,i4,a5', shape=3, byteorder='big')
-        fd.seek(2880 * 2)
-        r2 = np.rec.array(fd, formats='f8,i4,a5', shape=3, byteorder='big')
-        fd.close()
+        with open(filename, 'rb') as fd:
+            fd.seek(2880 * 2)
+            r1 = np.rec.fromfile(fd, formats='f8,i4,a5', shape=3, byteorder='big')
+            fd.seek(2880 * 2)
+            r2 = np.rec.array(fd, formats='f8,i4,a5', shape=3, byteorder='big')
         assert_equal(r1, r2)
 
     def test_recarray_from_obj(self):

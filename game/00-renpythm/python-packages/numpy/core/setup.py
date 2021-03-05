@@ -102,7 +102,7 @@ def win32_checks(deflist):
     # On win32, force long double format string to be 'g', not
     # 'Lg', since the MS runtime does not support long double whose
     # size is > sizeof(double)
-    if a == "Intel" or a == "AMD64":
+    if a in ["Intel", "AMD64"]:
         deflist.append('FORCE_NO_LONG_DOUBLE_FORMATTING')
 
 def check_math_capabilities(config, moredefs, mathlibs):
@@ -121,14 +121,14 @@ def check_math_capabilities(config, moredefs, mathlibs):
     def check_funcs(funcs_name):
         # Use check_funcs_once first, and if it does not work, test func per
         # func. Return success only if all the functions are available
-        if not check_funcs_once(funcs_name):
-            # Global check failed, check func per func
-            for f in funcs_name:
-                if check_func(f):
-                    moredefs.append((fname2def(f), 1))
-            return 0
-        else:
+        if check_funcs_once(funcs_name):
             return 1
+
+        # Global check failed, check func per func
+        for f in funcs_name:
+            if check_func(f):
+                moredefs.append((fname2def(f), 1))
+        return 0
 
     #use_msvc = config.check_decl("_MSC_VER")
 
@@ -304,13 +304,12 @@ def check_types(config_cmd, ext, build_dir):
         already_declared = config_cmd.check_decl("SIZEOF_%s" % sym2def(type),
                                                  headers=["Python.h"])
         res = config_cmd.check_type_size(type, expected=expected[type])
-        if res >= 0:
-            public_defines.append(('NPY_SIZEOF_%s' % sym2def(type), '%d' % res))
-            if not already_declared and not type == 'long double':
-                private_defines.append(('SIZEOF_%s' % sym2def(type), '%d' % res))
-        else:
+        if res < 0:
             raise SystemError("Checking sizeof (%s) failed !" % type)
 
+        public_defines.append(('NPY_SIZEOF_%s' % sym2def(type), '%d' % res))
+        if not already_declared and type != 'long double':
+            private_defines.append(('SIZEOF_%s' % sym2def(type), '%d' % res))
         # Compute size of corresponding complex type: used to check that our
         # definition is binary compatible with C99 complex type (check done at
         # build time in npy_common.h)
@@ -327,23 +326,21 @@ def check_types(config_cmd, ext, build_dir):
                 library_dirs=[pythonlib_dir()],
                 expected=expected[type])
 
-        if res >= 0:
-            private_defines.append(('SIZEOF_%s' % sym2def(type), '%d' % res))
-            public_defines.append(('NPY_SIZEOF_%s' % sym2def(type), '%d' % res))
-        else:
+        if res < 0:
             raise SystemError("Checking sizeof (%s) failed !" % type)
 
+        private_defines.append(('SIZEOF_%s' % sym2def(type), '%d' % res))
+        public_defines.append(('NPY_SIZEOF_%s' % sym2def(type), '%d' % res))
     # We check declaration AND type because that's how distutils does it.
     if config_cmd.check_decl('PY_LONG_LONG', headers=['Python.h']):
         res = config_cmd.check_type_size('PY_LONG_LONG',  headers=['Python.h'],
                 library_dirs=[pythonlib_dir()],
                 expected=expected['PY_LONG_LONG'])
-        if res >= 0:
-            private_defines.append(('SIZEOF_%s' % sym2def('PY_LONG_LONG'), '%d' % res))
-            public_defines.append(('NPY_SIZEOF_%s' % sym2def('PY_LONG_LONG'), '%d' % res))
-        else:
+        if res < 0:
             raise SystemError("Checking sizeof (%s) failed !" % 'PY_LONG_LONG')
 
+        private_defines.append(('SIZEOF_%s' % sym2def('PY_LONG_LONG'), '%d' % res))
+        public_defines.append(('NPY_SIZEOF_%s' % sym2def('PY_LONG_LONG'), '%d' % res))
         res = config_cmd.check_type_size('long long',
                 expected=expected['long long'])
         if res >= 0:
@@ -667,8 +664,8 @@ def configuration(parent_package='',top_path=None):
             raise RuntimeError("Broken toolchain: cannot link a simple C program")
         mlibs = check_mathlib(config_cmd)
 
-        posix_mlib = ' '.join(['-l%s' % l for l in mlibs])
-        msvc_mlib = ' '.join(['%s.lib' % l for l in mlibs])
+        posix_mlib = ' '.join('-l%s' % l for l in mlibs)
+        msvc_mlib = ' '.join('%s.lib' % l for l in mlibs)
         subst_dict["posix_mathlib"] = posix_mlib
         subst_dict["msvc_mathlib"] = msvc_mlib
 
@@ -884,10 +881,9 @@ def configuration(parent_package='',top_path=None):
             os.makedirs(dir)
         script = generate_umath_py
         if newer(script, target):
-            f = open(target, 'w')
-            f.write(generate_umath.make_code(generate_umath.defdict,
-                                             generate_umath.__file__))
-            f.close()
+            with open(target, 'w') as f:
+                f.write(generate_umath.make_code(generate_umath.defdict,
+                                                 generate_umath.__file__))
         return []
 
     umath_src = [

@@ -150,8 +150,7 @@ def parse_values(astr):
     # split at ',' and a list of values returned.
     astr = parenrep.sub(paren_repl, astr)
     # replaces occurrences of xxx*3 with xxx, xxx, xxx
-    astr = ','.join([plainrep.sub(paren_repl, x.strip())
-                     for x in astr.split(',')])
+    astr = ','.join(plainrep.sub(paren_repl, x.strip()) for x in astr.split(','))
     return astr.split(',')
 
 
@@ -257,8 +256,7 @@ def parse_string(astr, env, level, line) :
     return ''.join(code)
 
 def process_str(astr):
-    code = [header]
-    code.extend(parse_string(astr, global_names, 0, 1))
+    code = [header, *parse_string(astr, global_names, 0, 1)]
     return ''.join(code)
 
 
@@ -267,22 +265,21 @@ include_src_re = re.compile(r"(\n|\A)#include\s*['\"]"
 
 def resolve_includes(source):
     d = os.path.dirname(source)
-    fid = open(source)
-    lines = []
-    for line in fid:
-        m = include_src_re.match(line)
-        if m:
-            fn = m.group('name')
-            if not os.path.isabs(fn):
-                fn = os.path.join(d, fn)
-            if os.path.isfile(fn):
-                print('Including file', fn)
-                lines.extend(resolve_includes(fn))
+    with open(source) as fid:
+        lines = []
+        for line in fid:
+            m = include_src_re.match(line)
+            if m:
+                fn = m.group('name')
+                if not os.path.isabs(fn):
+                    fn = os.path.join(d, fn)
+                if os.path.isfile(fn):
+                    print('Including file', fn)
+                    lines.extend(resolve_includes(fn))
+                else:
+                    lines.append(line)
             else:
                 lines.append(line)
-        else:
-            lines.append(line)
-    fid.close()
     return lines
 
 def process_file(source):
@@ -305,7 +302,7 @@ def unique_key(adict):
     done = False
     n = 1
     while not done:
-        newkey = "".join([x[:n] for x in allkeys])
+        newkey = "".join(x[:n] for x in allkeys)
         if newkey in allkeys:
             n += 1
         else:

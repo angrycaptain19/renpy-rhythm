@@ -149,7 +149,7 @@ class MachAr(object):
         it = -1
         b = one
         for _ in range(max_iterN):
-            it = it + 1
+            it += 1
             b = b * beta
             temp = b + one
             temp1 = temp - b
@@ -235,35 +235,34 @@ class MachAr(object):
             temp1 = temp * betain
             if any(temp1*beta == z):
                 break
-            i = i + 1
-            k = k + k
+            i += 1
+            k += k
         else:
             raise RuntimeError(msg % (_, one.dtype))
-        if ibeta != 10:
-            iexp = i + 1
-            mx = k + k
-        else:
+        if ibeta == 10:
             iexp = 2
             iz = ibeta
             while k >= iz:
                 iz = iz * ibeta
-                iexp = iexp + 1
+                iexp += 1
             mx = iz + iz - 1
 
+        else:
+            iexp = i + 1
+            mx = k + k
         # Determine minexp and xmin
         for _ in range(max_iterN):
             xmin = y
             y = y * betain
             a = y * one
             temp = y * t
-            if any((a + a) != zero) and any(abs(y) < xmin):
-                k = k + 1
-                temp1 = temp * betain
-                if any(temp1*beta == y) and any(temp != y):
-                    nxres = 3
-                    xmin = y
-                    break
-            else:
+            if not any((a + a) != zero) or not any(abs(y) < xmin):
+                break
+            k += 1
+            temp1 = temp * betain
+            if any(temp1*beta == y) and any(temp != y):
+                nxres = 3
+                xmin = y
                 break
         else:
             raise RuntimeError(msg % (_, one.dtype))
@@ -274,7 +273,7 @@ class MachAr(object):
             mx = mx + mx
             iexp = iexp + 1
         maxexp = mx + minexp
-        irnd = irnd + nxres
+        irnd += nxres
         if irnd >= 2:
             maxexp = maxexp - 2
         i = maxexp + minexp
@@ -289,12 +288,8 @@ class MachAr(object):
             xmax = one - beta*epsneg
         xmax = xmax / (xmin*beta*beta*beta)
         i = maxexp + minexp + 3
-        for j in range(i):
-            if ibeta == 2:
-                xmax = xmax + xmax
-            else:
-                xmax = xmax * beta
-
+        for _ in range(i):
+            xmax = xmax + xmax if ibeta == 2 else xmax * beta
         self.ibeta = ibeta
         self.it = it
         self.negep = negep

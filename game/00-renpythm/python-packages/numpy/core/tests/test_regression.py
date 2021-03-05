@@ -438,32 +438,32 @@ class TestRegression(object):
         assert_raises(KeyError, np.lexsort, BuggySequence())
 
     def test_pickle_py2_bytes_encoding(self):
-        # Check that arrays and scalars pickled on Py2 are
-        # unpickleable on Py3 using encoding='bytes'
-
-        test_data = [
-            # (original, py2_pickle)
-            (np.unicode_('\u6f2c'),
-             b"cnumpy.core.multiarray\nscalar\np0\n(cnumpy\ndtype\np1\n"
-             b"(S'U1'\np2\nI0\nI1\ntp3\nRp4\n(I3\nS'<'\np5\nNNNI4\nI4\n"
-             b"I0\ntp6\nbS',o\\x00\\x00'\np7\ntp8\nRp9\n."),
-
-            (np.array([9e123], dtype=np.float64),
-             b"cnumpy.core.multiarray\n_reconstruct\np0\n(cnumpy\nndarray\n"
-             b"p1\n(I0\ntp2\nS'b'\np3\ntp4\nRp5\n(I1\n(I1\ntp6\ncnumpy\ndtype\n"
-             b"p7\n(S'f8'\np8\nI0\nI1\ntp9\nRp10\n(I3\nS'<'\np11\nNNNI-1\nI-1\n"
-             b"I0\ntp12\nbI00\nS'O\\x81\\xb7Z\\xaa:\\xabY'\np13\ntp14\nb."),
-
-            (np.array([(9e123,)], dtype=[('name', float)]),
-             b"cnumpy.core.multiarray\n_reconstruct\np0\n(cnumpy\nndarray\np1\n"
-             b"(I0\ntp2\nS'b'\np3\ntp4\nRp5\n(I1\n(I1\ntp6\ncnumpy\ndtype\np7\n"
-             b"(S'V8'\np8\nI0\nI1\ntp9\nRp10\n(I3\nS'|'\np11\nN(S'name'\np12\ntp13\n"
-             b"(dp14\ng12\n(g7\n(S'f8'\np15\nI0\nI1\ntp16\nRp17\n(I3\nS'<'\np18\nNNNI-1\n"
-             b"I-1\nI0\ntp19\nbI0\ntp20\nsI8\nI1\nI0\ntp21\n"
-             b"bI00\nS'O\\x81\\xb7Z\\xaa:\\xabY'\np22\ntp23\nb."),
-        ]
-
         if sys.version_info[:2] >= (3, 4):
+            # Check that arrays and scalars pickled on Py2 are
+            # unpickleable on Py3 using encoding='bytes'
+
+            test_data = [
+                # (original, py2_pickle)
+                (np.unicode_('\u6f2c'),
+                 b"cnumpy.core.multiarray\nscalar\np0\n(cnumpy\ndtype\np1\n"
+                 b"(S'U1'\np2\nI0\nI1\ntp3\nRp4\n(I3\nS'<'\np5\nNNNI4\nI4\n"
+                 b"I0\ntp6\nbS',o\\x00\\x00'\np7\ntp8\nRp9\n."),
+
+                (np.array([9e123], dtype=np.float64),
+                 b"cnumpy.core.multiarray\n_reconstruct\np0\n(cnumpy\nndarray\n"
+                 b"p1\n(I0\ntp2\nS'b'\np3\ntp4\nRp5\n(I1\n(I1\ntp6\ncnumpy\ndtype\n"
+                 b"p7\n(S'f8'\np8\nI0\nI1\ntp9\nRp10\n(I3\nS'<'\np11\nNNNI-1\nI-1\n"
+                 b"I0\ntp12\nbI00\nS'O\\x81\\xb7Z\\xaa:\\xabY'\np13\ntp14\nb."),
+
+                (np.array([(9e123,)], dtype=[('name', float)]),
+                 b"cnumpy.core.multiarray\n_reconstruct\np0\n(cnumpy\nndarray\np1\n"
+                 b"(I0\ntp2\nS'b'\np3\ntp4\nRp5\n(I1\n(I1\ntp6\ncnumpy\ndtype\np7\n"
+                 b"(S'V8'\np8\nI0\nI1\ntp9\nRp10\n(I3\nS'|'\np11\nN(S'name'\np12\ntp13\n"
+                 b"(dp14\ng12\n(g7\n(S'f8'\np15\nI0\nI1\ntp16\nRp17\n(I3\nS'<'\np18\nNNNI-1\n"
+                 b"I-1\nI0\ntp19\nbI0\ntp20\nsI8\nI1\nI0\ntp21\n"
+                 b"bI00\nS'O\\x81\\xb7Z\\xaa:\\xabY'\np22\ntp23\nb."),
+            ]
+
             # encoding='bytes' was added in Py3.4
             for original, data in test_data:
                 result = pickle.loads(data, encoding='bytes')
@@ -1058,10 +1058,7 @@ class TestRegression(object):
     def test_nonnative_endian_fill(self):
         # Non-native endian arrays were incorrectly filled with scalars
         # before r5034.
-        if sys.byteorder == 'little':
-            dtype = np.dtype('>i4')
-        else:
-            dtype = np.dtype('<i4')
+        dtype = np.dtype('>i4') if sys.byteorder == 'little' else np.dtype('<i4')
         x = np.empty([1], dtype=dtype)
         x.fill(1)
         assert_equal(x, np.array([1], dtype=dtype))
@@ -1085,11 +1082,10 @@ class TestRegression(object):
         if sys.version_info[0] >= 3:
             f = open(filename, 'rb')
             xp = pickle.load(f, encoding='latin1')
-            f.close()
         else:
             f = open(filename)
             xp = pickle.load(f)
-            f.close()
+        f.close()
         xpd = xp.astype(np.float64)
         assert_((xp.__array_interface__['data'][0] !=
                 xpd.__array_interface__['data'][0]))
@@ -1295,7 +1291,7 @@ class TestRegression(object):
         # Ticket #950
         for m in [0, 1, 2]:
             for n in [0, 1, 2]:
-                for k in range(3):
+                for _ in range(3):
                     # Try to ensure that x->data contains non-zero floats
                     x = np.array([123456789e199], dtype=np.float64)
                     if IS_PYPY:
@@ -1314,19 +1310,19 @@ class TestRegression(object):
                     assert_(z.shape == (m, n))
 
     def test_zeros(self):
-        # Regression test for #1061.
-        # Set a size which cannot fit into a 64 bits signed integer
-        sz = 2 ** 64
         with assert_raises_regex(ValueError,
-                                 'Maximum allowed dimension exceeded'):
+                                     'Maximum allowed dimension exceeded'):
+            # Regression test for #1061.
+            # Set a size which cannot fit into a 64 bits signed integer
+            sz = 2 ** 64
             np.empty(sz)
 
     def test_huge_arange(self):
-        # Regression test for #1062.
-        # Set a size which cannot fit into a 64 bits signed integer
-        sz = 2 ** 64
         with assert_raises_regex(ValueError,
-                                 'Maximum allowed size exceeded'):
+                                     'Maximum allowed size exceeded'):
+            # Regression test for #1062.
+            # Set a size which cannot fit into a 64 bits signed integer
+            sz = 2 ** 64
             np.arange(sz)
             assert_(np.size == sz)
 
@@ -1723,8 +1719,7 @@ class TestRegression(object):
 
             def __new__(cls,
                         input_array):
-                obj = np.asarray(input_array).view(cls)
-                return obj
+                return np.asarray(input_array).view(cls)
 
             # it is perfectly reasonable that prior
             # to numpy version 1.7.0 a subclass of ndarray
@@ -1937,15 +1932,15 @@ class TestRegression(object):
                 assert_equal(bytestring[0:1], '\x01'.encode('ascii'))
 
     def test_pickle_py2_array_latin1_hack(self):
-        # Check that unpickling hacks in Py3 that support
-        # encoding='latin1' work correctly.
-
-        # Python2 output for pickle.dumps(numpy.array([129], dtype='b'))
-        data = (b"cnumpy.core.multiarray\n_reconstruct\np0\n(cnumpy\nndarray\np1\n(I0\n"
-                b"tp2\nS'b'\np3\ntp4\nRp5\n(I1\n(I1\ntp6\ncnumpy\ndtype\np7\n(S'i1'\np8\n"
-                b"I0\nI1\ntp9\nRp10\n(I3\nS'|'\np11\nNNNI-1\nI-1\nI0\ntp12\nbI00\nS'\\x81'\n"
-                b"p13\ntp14\nb.")
         if sys.version_info[0] >= 3:
+            # Check that unpickling hacks in Py3 that support
+            # encoding='latin1' work correctly.
+
+            # Python2 output for pickle.dumps(numpy.array([129], dtype='b'))
+            data = (b"cnumpy.core.multiarray\n_reconstruct\np0\n(cnumpy\nndarray\np1\n(I0\n"
+                    b"tp2\nS'b'\np3\ntp4\nRp5\n(I1\n(I1\ntp6\ncnumpy\ndtype\np7\n(S'i1'\np8\n"
+                    b"I0\nI1\ntp9\nRp10\n(I3\nS'|'\np11\nNNNI-1\nI-1\nI0\ntp12\nbI00\nS'\\x81'\n"
+                    b"p13\ntp14\nb.")
             # This should work:
             result = pickle.loads(data, encoding='latin1')
             assert_array_equal(result, np.array([129], dtype='b'))
@@ -1953,6 +1948,8 @@ class TestRegression(object):
             assert_raises(Exception, pickle.loads, data, encoding='koi8-r')
 
     def test_pickle_py2_scalar_latin1_hack(self):
+        if sys.version_info[0] < 3:
+            return
         # Check that scalar unpickling hack in Py3 that supports
         # encoding='latin1' work correctly.
 
@@ -1977,25 +1974,24 @@ class TestRegression(object):
               b"tp8\nRp9\n."),
              'different'),
         ]
-        if sys.version_info[0] >= 3:
-            for original, data, koi8r_validity in datas:
-                result = pickle.loads(data, encoding='latin1')
-                assert_equal(result, original)
+        for original, data, koi8r_validity in datas:
+            result = pickle.loads(data, encoding='latin1')
+            assert_equal(result, original)
 
-                # Decoding under non-latin1 encoding (e.g.) KOI8-R can
-                # produce bad results, but should not segfault.
-                if koi8r_validity == 'different':
-                    # Unicode code points happen to lie within latin1,
-                    # but are different in koi8-r, resulting to silent
-                    # bogus results
-                    result = pickle.loads(data, encoding='koi8-r')
-                    assert_(result != original)
-                elif koi8r_validity == 'invalid':
-                    # Unicode code points outside latin1, so results
-                    # to an encoding exception
-                    assert_raises(ValueError, pickle.loads, data, encoding='koi8-r')
-                else:
-                    raise ValueError(koi8r_validity)
+            # Decoding under non-latin1 encoding (e.g.) KOI8-R can
+            # produce bad results, but should not segfault.
+            if koi8r_validity == 'different':
+                # Unicode code points happen to lie within latin1,
+                # but are different in koi8-r, resulting to silent
+                # bogus results
+                result = pickle.loads(data, encoding='koi8-r')
+                assert_(result != original)
+            elif koi8r_validity == 'invalid':
+                # Unicode code points outside latin1, so results
+                # to an encoding exception
+                assert_raises(ValueError, pickle.loads, data, encoding='koi8-r')
+            else:
+                raise ValueError(koi8r_validity)
 
     def test_structured_type_to_object(self):
         a_rec = np.array([(0, 1), (3, 2)], dtype='i4,i8')
@@ -2031,7 +2027,7 @@ class TestRegression(object):
 
     def test_memoryleak(self):
         # Ticket #1917 - ensure that array data doesn't leak
-        for i in range(1000):
+        for _ in range(1000):
             # 100MB times 1000 would give 100GB of memory usage if it leaks
             a = np.empty((100000000,), dtype='i1')
             del a
@@ -2275,7 +2271,7 @@ class TestRegression(object):
 
         # Simple case
         a = np.zeros(2, dtype=recordtype)
-        for i in range(100):
+        for _ in range(100):
             a == a
         assert_(sys.getrefcount(a) < 10)
 
@@ -2378,7 +2374,7 @@ class TestRegression(object):
         # not working properly and resulting to double-decref of the
         # structured array field items:
         # See: https://bitbucket.org/pypy/pypy/issues/2789
-        for j in range(5):
+        for _ in range(5):
             structure = np.array([1], dtype=[(('x', 'X'), np.object_)])
             structure[0]['x'] = np.array([2])
             gc.collect()
@@ -2406,7 +2402,7 @@ class TestRegression(object):
             base = sys.getrefcount(s)
         t = np.dtype([((s, 'f1'), np.float64)])
         data = np.zeros(10, t)
-        for i in range(10):
+        for _ in range(10):
             str(data[['f1']])
             if HAS_REFCOUNT:
                 assert_(base <= sys.getrefcount(s))

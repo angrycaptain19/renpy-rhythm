@@ -228,7 +228,7 @@ class TestConcatenate(object):
         a = np.ones((1, 2, 3))
         b = np.ones((2, 2, 3))
         axis = list(range(3))
-        for i in range(3):
+        for _ in range(3):
             np.concatenate((a, b), axis=axis[0])  # OK
             assert_raises(ValueError, np.concatenate, (a, b), axis=axis[1])
             assert_raises(ValueError, np.concatenate, (a, b), axis=axis[2])
@@ -391,7 +391,7 @@ def test_stack():
                         stack, [np.arange(2), np.arange(3)])
     # generator is deprecated
     with assert_warns(FutureWarning):
-        result = stack((x for x in range(3)))
+        result = stack(iter(range(3)))
     assert_array_equal(result, np.array([0, 1, 2]))
 
 

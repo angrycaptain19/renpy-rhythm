@@ -47,12 +47,8 @@ class TestBuiltin(object):
     def test_equivalent_dtype_hashing(self):
         # Make sure equivalent dtypes with different type num hash equal
         uintp = np.dtype(np.uintp)
-        if uintp.itemsize == 4:
-            left = uintp
-            right = np.dtype(np.uint32)
-        else:
-            left = uintp
-            right = np.dtype(np.ulonglong)
+        left = uintp
+        right = np.dtype(np.uint32) if uintp.itemsize == 4 else np.dtype(np.ulonglong)
         assert_(left == right)
         assert_(hash(left) == hash(right))
 
@@ -68,7 +64,7 @@ class TestBuiltin(object):
         assert_raises(TypeError, np.dtype, 'e3')
         assert_raises(TypeError, np.dtype, 'f5')
 
-        if np.dtype('g').itemsize == 8 or np.dtype('g').itemsize == 16:
+        if np.dtype('g').itemsize in [8, 16]:
             assert_raises(TypeError, np.dtype, 'g12')
         elif np.dtype('g').itemsize == 12:
             assert_raises(TypeError, np.dtype, 'g16')

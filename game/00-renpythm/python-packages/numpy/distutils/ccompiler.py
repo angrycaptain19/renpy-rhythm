@@ -445,14 +445,6 @@ def CCompiler_show_customization(self):
     Printing is only done if the distutils log threshold is < 2.
 
     """
-    if 0:
-        for attrname in ['include_dirs', 'define', 'undef',
-                         'libraries', 'library_dirs',
-                         'rpath', 'link_objects']:
-            attr = getattr(self, attrname, None)
-            if not attr:
-                continue
-            log.info("compiler '%s' is set to %s" % (attrname, attr))
     try:
         self.get_version()
     except Exception:
@@ -635,8 +627,7 @@ def CCompiler_get_version(self, force=False, ok_status=[0]):
             m = re.match(pat, version_string)
             if not m:
                 return None
-            version = m.group('version')
-            return version
+            return m.group('version')
 
     try:
         output = subprocess.check_output(version_cmd, stderr=subprocess.STDOUT)

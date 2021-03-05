@@ -396,14 +396,14 @@ class TestBoolCmp(object):
         # offset for alignment test
         for i in range(4):
             assert_array_equal(self.f[i:] > 0, self.ef[i:])
-            assert_array_equal(self.f[i:] - 1 >= 0, self.ef[i:])
+            assert_array_equal(self.f[i:] >= 1, self.ef[i:])
             assert_array_equal(self.f[i:] == 0, ~self.ef[i:])
             assert_array_equal(-self.f[i:] < 0, self.ef[i:])
-            assert_array_equal(-self.f[i:] + 1 <= 0, self.ef[i:])
+            assert_array_equal(-self.f[i:] <= -1, self.ef[i:])
             r = self.f[i:] != 0
             assert_array_equal(r, self.ef[i:])
             r2 = self.f[i:] != np.zeros_like(self.f[i:])
-            r3 = 0 != self.f[i:]
+            r3 = self.f[i:] != 0
             assert_array_equal(r, r2)
             assert_array_equal(r, r3)
             # check bool == 0x1
@@ -422,14 +422,14 @@ class TestBoolCmp(object):
         # offset for alignment test
         for i in range(2):
             assert_array_equal(self.d[i:] > 0, self.ed[i:])
-            assert_array_equal(self.d[i:] - 1 >= 0, self.ed[i:])
+            assert_array_equal(self.d[i:] >= 1, self.ed[i:])
             assert_array_equal(self.d[i:] == 0, ~self.ed[i:])
             assert_array_equal(-self.d[i:] < 0, self.ed[i:])
-            assert_array_equal(-self.d[i:] + 1 <= 0, self.ed[i:])
+            assert_array_equal(-self.d[i:] <= -1, self.ed[i:])
             r = self.d[i:] != 0
             assert_array_equal(r, self.ed[i:])
             r2 = self.d[i:] != np.zeros_like(self.d[i:])
-            r3 = 0 != self.d[i:]
+            r3 = self.d[i:] != 0
             assert_array_equal(r, r2)
             assert_array_equal(r, r3)
             # check bool == 0x1
@@ -518,7 +518,7 @@ class TestSeterr(object):
             np.isnan(np.array([6]))
             # same with the default, lots of times to get rid of possible
             # pre-existing stack in the code
-            for i in range(10000):
+            for _ in range(10000):
                 np.seterrobj([umath.UFUNC_BUFSIZE_DEFAULT, umath.ERR_DEFAULT,
                              None])
             np.isnan(np.array([6]))
@@ -1958,11 +1958,11 @@ class TestIsclose(object):
         assert_(not np.any(np.isclose(x, y)), msg % (x, y))
 
     def tst_isclose_allclose(self, x, y):
-        msg = "isclose.all() and allclose aren't same for %s and %s"
-        msg2 = "isclose and allclose aren't same for %s and %s"
         if np.isscalar(x) and np.isscalar(y):
+            msg2 = "isclose and allclose aren't same for %s and %s"
             assert_(np.isclose(x, y) == np.allclose(x, y), msg=msg2 % (x, y))
         else:
+            msg = "isclose.all() and allclose aren't same for %s and %s"
             assert_array_equal(np.isclose(x, y).all(), np.allclose(x, y), msg % (x, y))
 
     def test_ip_all_isclose(self):
@@ -2120,10 +2120,7 @@ class TestCreationFuncs(object):
             assert_(getattr(arr.flags, self.orders[order]))
 
             if fill_value is not None:
-                if dtype.str.startswith('|S'):
-                    val = str(fill_value)
-                else:
-                    val = fill_value
+                val = str(fill_value) if dtype.str.startswith('|S') else fill_value
                 assert_equal(arr, dtype.type(val))
 
     def test_zeros(self):

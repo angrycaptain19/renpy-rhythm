@@ -78,9 +78,8 @@ def find_duplicate(list):
     """Find duplication in a list, return a list of duplicated elements"""
     dup = []
     for i in range(len(list)):
-        if (list[i] in list[i + 1:]):
-            if (list[i] not in dup):
-                dup.append(list[i])
+        if (list[i] in list[i + 1 :]) and (list[i] not in dup):
+            dup.append(list[i])
     return dup
 
 
@@ -245,21 +244,21 @@ class record(nt.void):
             pass
         fielddict = nt.void.__getattribute__(self, 'dtype').fields
         res = fielddict.get(attr, None)
-        if res:
-            obj = self.getfield(*res[:2])
-            # if it has fields return a record,
-            # otherwise return the object
-            try:
-                dt = obj.dtype
-            except AttributeError:
-                #happens if field is Object type
-                return obj
-            if dt.names is not None:
-                return obj.view((self.__class__, obj.dtype))
-            return obj
-        else:
+        if not res:
             raise AttributeError("'record' object has no "
                     "attribute '%s'" % attr)
+
+        obj = self.getfield(*res[:2])
+        # if it has fields return a record,
+        # otherwise return the object
+        try:
+            dt = obj.dtype
+        except AttributeError:
+            #happens if field is Object type
+            return obj
+        if dt.names is not None:
+            return obj.view((self.__class__, obj.dtype))
+        return obj
 
     def __setattr__(self, attr, val):
         if attr in ['setfield', 'getfield', 'dtype']:
@@ -423,12 +422,11 @@ class recarray(ndarray):
             descr = format_parser(formats, names, titles, aligned, byteorder)._descr
 
         if buf is None:
-            self = ndarray.__new__(subtype, shape, (record, descr), order=order)
+            return ndarray.__new__(subtype, shape, (record, descr), order=order)
         else:
-            self = ndarray.__new__(subtype, shape, (record, descr),
+            return ndarray.__new__(subtype, shape, (record, descr),
                                       buffer=buf, offset=offset,
                                       strides=strides, order=order)
-        return self
 
     def __array_finalize__(self, obj):
         if self.dtype.type is not record and self.dtype.names is not None:
@@ -459,12 +457,12 @@ class recarray(ndarray):
         # with void type convert it to the same dtype.type (eg to preserve
         # numpy.record type if present), since nested structured fields do not
         # inherit type. Don't do this for non-void structures though.
-        if obj.dtype.names is not None:
-            if issubclass(obj.dtype.type, nt.void):
-                return obj.view(dtype=(self.dtype.type, obj.dtype))
-            return obj
-        else:
+        if obj.dtype.names is None:
             return obj.view(ndarray)
+
+        if issubclass(obj.dtype.type, nt.void):
+            return obj.view(dtype=(self.dtype.type, obj.dtype))
+        return obj
 
     # Save the dictionary.
     # If the attr is a field name and not in the saved dictionary
@@ -562,13 +560,13 @@ class recarray(ndarray):
 
         res = fielddict[attr][:2]
 
-        if val is None:
-            obj = self.getfield(*res)
-            if obj.dtype.names is not None:
-                return obj
-            return obj.view(ndarray)
-        else:
+        if val is not None:
             return self.setfield(val, *res)
+
+        obj = self.getfield(*res)
+        if obj.dtype.names is not None:
+            return obj
+        return obj.view(ndarray)
 
 
 def fromarrays(arrayList, dtype=None, shape=None, formats=None,
@@ -700,9 +698,7 @@ def fromrecords(recList, dtype=None, shape=None, formats=None, names=None,
         if shape is not None and retval.shape != shape:
             retval.shape = shape
 
-    res = retval.view(recarray)
-
-    return res
+    return retval.view(recarray)
 
 
 def fromstring(datastring, dtype=None, shape=None, offset=0, formats=None,
@@ -722,8 +718,7 @@ def fromstring(datastring, dtype=None, shape=None, offset=0, formats=None,
     if (shape is None or shape == 0 or shape == -1):
         shape = (len(datastring) - offset) // itemsize
 
-    _array = recarray(shape, descr, buf=datastring, offset=offset)
-    return _array
+    return recarray(shape, descr, buf=datastring, offset=offset)
 
 def get_remaining_size(fd):
     try:
@@ -731,8 +726,7 @@ def get_remaining_size(fd):
     except AttributeError:
         return os.path.getsize(fd.name) - fd.tell()
     st = os.fstat(fn)
-    size = st.st_size - fd.tell()
-    return size
+    return st.st_size - fd.tell()
 
 def fromfile(fd, dtype=None, shape=None, offset=0, formats=None,
              names=None, titles=None, aligned=False, byteorder=None):
